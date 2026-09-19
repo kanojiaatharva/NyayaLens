@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FileText,
@@ -114,12 +114,16 @@ export default function AnalysisPage() {
     );
   }
 
-  const filteredSections = currentDocument.sections.filter(s =>
-    clauseSearch === '' ||
-    s.title.toLowerCase().includes(clauseSearch.toLowerCase()) ||
-    s.content.toLowerCase().includes(clauseSearch.toLowerCase()) ||
-    s.clauseNumber.toLowerCase().includes(clauseSearch.toLowerCase())
-  );
+  const filteredSections = useMemo(() => {
+    if (!currentDocument) return [];
+    const query = clauseSearch.toLowerCase().trim();
+    if (!query) return currentDocument.sections;
+    return currentDocument.sections.filter(s =>
+      s.title.toLowerCase().includes(query) ||
+      s.content.toLowerCase().includes(query) ||
+      s.clauseNumber.toLowerCase().includes(query)
+    );
+  }, [currentDocument, clauseSearch]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {

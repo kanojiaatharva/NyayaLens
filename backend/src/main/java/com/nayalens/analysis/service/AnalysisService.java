@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
@@ -57,12 +58,27 @@ public class AnalysisService {
         LegalDocument document = documentRepository.findById(documentId)
                 .orElseThrow(() -> new DocumentNotFoundException(documentId));
 
-        // 1. Run deterministic risk rule engine
-        List<Claim> deterministicRisks = riskEngine.scanRisks(document);
+        // 1. Run deterministic risk rule engine concurrently
+        CompletableFuture<List<Claim>> deterministicFuture = CompletableFuture.supplyAsync(
+                () -> riskEngine.scanRisks(document)
+        );
 
-        // 2. Fetch AI structured understanding
+        // 2. Fetch AI structured understanding concurrently
         String prompt = PromptRegistry.buildUnderstandPrompt(document.sanitizedText());
-        String aiJson = geminiClient.generateStructuredJson(prompt, GeminiClient.ModelTier.FLASH);
+        CompletableFuture<String> understandFuture = CompletableFuture.supplyAsync(
+                () -> geminiClient.generateStructuredJson(prompt, GeminiClient.ModelTier.FLASH)
+        );
+
+        // 3. Fetch secondary AI risks concurrently
+        String riskPrompt = PromptRegistry.buildRiskPrompt(document.sanitizedText());
+        CompletableFuture<String> riskFuture = CompletableFuture.supplyAsync(
+                () -> geminiClient.generateStructuredJson(riskPrompt, GeminiClient.ModelTier.FLASH)
+        );
+
+        // Await all parallel tasks concurrently
+        List<Claim> deterministicRisks = deterministicFuture.join();
+        String aiJson = understandFuture.join();
+        String riskJson = riskFuture.join();
         String modelUsed = "gemini-3.8-flash";
 
         if (aiJson == null) {
@@ -70,7 +86,11 @@ public class AnalysisService {
             modelUsed = "deterministic-rule-engine";
         }
 
-        AnalysisResult result = parseAndVerifyAnalysis(document, aiJson, deterministicRisks, modelUsed);
+        if (riskJson == null) {
+            riskJson = geminiClient.getFallbackProvider().getFallbackRisks(document);
+        }
+
+        AnalysisResult result = parseAndVerifyAnalysis(document, aiJson, riskJson, deterministicRisks, modelUsed);
         analysisCache.put(documentId, result);
         return result;
     }
@@ -82,6 +102,7 @@ public class AnalysisService {
     private AnalysisResult parseAndVerifyAnalysis(
             LegalDocument document,
             String rawJson,
+            String riskJson,
             List<Claim> deterministicRisks,
             String modelUsed
     ) {
@@ -218,12 +239,7 @@ public class AnalysisService {
                 existingCategories.add(c.category().toUpperCase());
             }
 
-            // Scan AI risks if available
-            String riskPrompt = PromptRegistry.buildRiskPrompt(document.sanitizedText());
-            String riskJson = geminiClient.generateStructuredJson(riskPrompt, GeminiClient.ModelTier.FLASH);
-            if (riskJson == null) {
-                riskJson = geminiClient.getFallbackProvider().getFallbackRisks(document);
-            }
+            // Parse parallel-fetched AI risks if available
 
             try {
                 JsonNode riskRoot = objectMapper.readTree(riskJson);

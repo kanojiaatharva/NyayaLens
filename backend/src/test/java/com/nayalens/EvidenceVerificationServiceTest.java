@@ -107,4 +107,35 @@ class EvidenceVerificationServiceTest {
         assertEquals(VerificationStatus.INFERRED, claim.status());
         assertTrue(claim.evidenceList().isEmpty());
     }
+
+    @Test
+    @DisplayName("Should detect and auto-correct misattributed page citation")
+    void testMisattributedPageAutoCorrection() {
+        // Cited as Page 1, but text exists on Page 2
+        Claim claim = verificationService.verifyClaim(
+                mockDocument,
+                "Termination requires 60 days notice",
+                "TERMINATION_NOTICE",
+                Severity.HIGH,
+                "8.2",
+                1,
+                "Either party may terminate this Agreement by providing sixty (60) days prior written notice",
+                "Notice provision",
+                "Notice period?",
+                false
+        );
+
+        assertEquals(VerificationStatus.VERIFIED, claim.status());
+        assertFalse(claim.evidenceList().isEmpty());
+        assertEquals(2, claim.evidenceList().get(0).pageNumber(), "Expected verifier to auto-correct to Page 2");
+    }
+
+    @Test
+    @DisplayName("Should test text similarity fast-paths and empty boundaries")
+    void testCalculateTextSimilarityFastPaths() {
+        assertEquals(0.0, verificationService.calculateTextSimilarity(null, "text"));
+        assertEquals(0.0, verificationService.calculateTextSimilarity("text", ""));
+        assertEquals(1.0, verificationService.calculateTextSimilarity("exact phrase", "This is an exact phrase in full context"));
+        assertEquals(1.0, verificationService.calculateTextSimilarity("EXACT PHRASE", "this is an exact phrase in full context"));
+    }
 }

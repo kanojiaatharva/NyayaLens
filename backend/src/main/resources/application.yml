@@ -1,5 +1,13 @@
 server:
   port: ${PORT:${SERVER_PORT:8080}}
+  compression:
+    enabled: true
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
+    min-response-size: 1024
+  tomcat:
+    connection-timeout: 20000
+    max-connections: 10000
+    accept-count: 100
   error:
     include-message: never
     include-binding-errors: never
@@ -9,6 +17,9 @@ server:
 spring:
   application:
     name: nyayalens-backend
+  threads:
+    virtual:
+      enabled: true
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:default}
   servlet:

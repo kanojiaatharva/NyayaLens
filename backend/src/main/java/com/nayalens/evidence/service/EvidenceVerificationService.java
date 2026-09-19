@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.regex.Pattern;
 
 @Service
 public class EvidenceVerificationService {
@@ -115,6 +116,10 @@ public class EvidenceVerificationService {
         );
     }
 
+    private static final Pattern NON_ALPHANUMERIC = Pattern.compile("[^a-z0-9\\s]");
+    private static final Pattern MULTIPLE_SPACES = Pattern.compile("\\s+");
+    private static final Pattern WORD_DELIMITER = Pattern.compile("\\s+");
+
     /**
      * Compute token-level Jaccard & containment similarity between excerpt and candidate page text.
      */
@@ -123,19 +128,25 @@ public class EvidenceVerificationService {
             return 0.0;
         }
 
+        // Fast path 1: Raw case-insensitive substring containment
+        if (fullText.regionMatches(true, 0, excerpt, 0, excerpt.length()) || 
+            fullText.toLowerCase().contains(excerpt.toLowerCase().trim())) {
+            return 1.0;
+        }
+
         String normExcerpt = normalize(excerpt);
         String normFull = normalize(fullText);
 
-        // Exact substring containment is 100% verified
+        // Fast path 2: Normalized exact substring containment is 100% verified
         if (normFull.contains(normExcerpt)) {
             return 1.0;
         }
 
-        // Otherwise evaluate token sets
+        // Fallback: evaluate token sets
         Set<String> excerptTokens = tokenize(normExcerpt);
-        Set<String> fullTokens = tokenize(normFull);
-
         if (excerptTokens.isEmpty()) return 0.0;
+
+        Set<String> fullTokens = tokenize(normFull);
 
         int matchCount = 0;
         for (String token : excerptTokens) {
@@ -149,15 +160,14 @@ public class EvidenceVerificationService {
     }
 
     private String normalize(String s) {
-        return s.toLowerCase()
-                .replaceAll("[^a-z0-9\\s]", " ")
-                .replaceAll("\\s+", " ")
-                .trim();
+        if (s == null || s.isBlank()) return "";
+        String clean = NON_ALPHANUMERIC.matcher(s.toLowerCase()).replaceAll(" ");
+        return MULTIPLE_SPACES.matcher(clean).replaceAll(" ").trim();
     }
 
     private Set<String> tokenize(String s) {
-        String[] words = s.split("\\s+");
-        Set<String> set = new HashSet<>();
+        String[] words = WORD_DELIMITER.split(s);
+        Set<String> set = new HashSet<>(words.length);
         for (String w : words) {
             if (w.length() > 2) { // Skip 1-2 char stop tokens
                 set.add(w);

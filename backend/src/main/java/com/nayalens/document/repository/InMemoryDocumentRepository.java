@@ -16,6 +16,10 @@ public class InMemoryDocumentRepository implements DocumentRepository {
     private final Map<String, StoredDocumentEntry> storage = new ConcurrentHashMap<>();
     private final Duration sessionTtl;
 
+    public InMemoryDocumentRepository() {
+        this(60);
+    }
+
     public InMemoryDocumentRepository(@Value("${nyayalens.document.session-ttl-minutes:60}") int sessionTtlMinutes) {
         this.sessionTtl = Duration.ofMinutes(sessionTtlMinutes);
     }

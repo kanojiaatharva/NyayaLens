@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { BookOpen, Search, ExternalLink, ShieldCheck, Scale, Landmark, Award } from 'lucide-react';
 import { useApp } from '../App';
 import { api } from '../api/client';
@@ -21,15 +21,18 @@ export default function SourcesPage() {
 
   const categories = ['ALL', 'STATUTORY', 'JUDICIAL', 'LEGAL_AID', 'CONSUMER_LABOR'];
 
-  const filtered = resources.filter(res => {
-    const matchesCat = categoryFilter === 'ALL' || res.category.toUpperCase() === categoryFilter;
-    const matchesSearch =
-      search === '' ||
-      res.name.toLowerCase().includes(search.toLowerCase()) ||
-      res.description.toLowerCase().includes(search.toLowerCase()) ||
-      res.keyLegislationCovered.toLowerCase().includes(search.toLowerCase());
-    return matchesCat && matchesSearch;
-  });
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    return resources.filter(res => {
+      const matchesCat = categoryFilter === 'ALL' || res.category.toUpperCase() === categoryFilter;
+      const matchesSearch =
+        q === '' ||
+        res.name.toLowerCase().includes(q) ||
+        res.description.toLowerCase().includes(q) ||
+        res.keyLegislationCovered.toLowerCase().includes(q);
+      return matchesCat && matchesSearch;
+    });
+  }, [resources, categoryFilter, search]);
 
   return (
     <div style={{ maxWidth: 1000, margin: '0 auto' }}>

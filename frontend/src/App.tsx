@@ -1,17 +1,18 @@
-import { useState, useCallback, createContext, useContext } from 'react';
+import { useState, useCallback, createContext, useContext, lazy, Suspense } from 'react';
 import { Routes, Route, NavLink } from 'react-router-dom';
-import { Scale, LayoutDashboard, Upload, Search, GitCompare, MessageCircleQuestion, Route as RouteIcon, BookOpen, Shield, Cpu } from 'lucide-react';
+import { Scale, LayoutDashboard, Upload, Search, GitCompare, MessageCircleQuestion, Route as RouteIcon, BookOpen, Shield, Cpu, RefreshCw } from 'lucide-react';
 import { Language, translations, TranslationDict } from './i18n/translations';
 import { DocumentUploadResponse, AnalysisResult, LegalDocument } from './types';
-import DashboardPage from './pages/DashboardPage';
-import UploadPage from './pages/UploadPage';
-import AnalysisPage from './pages/AnalysisPage';
-import ComparePage from './pages/ComparePage';
-import AskPage from './pages/AskPage';
-import ActionPathPage from './pages/ActionPathPage';
-import SourcesPage from './pages/SourcesPage';
-import SecurityPage from './pages/SecurityPage';
-import HowItWorksPage from './pages/HowItWorksPage';
+
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const UploadPage = lazy(() => import('./pages/UploadPage'));
+const AnalysisPage = lazy(() => import('./pages/AnalysisPage'));
+const ComparePage = lazy(() => import('./pages/ComparePage'));
+const AskPage = lazy(() => import('./pages/AskPage'));
+const ActionPathPage = lazy(() => import('./pages/ActionPathPage'));
+const SourcesPage = lazy(() => import('./pages/SourcesPage'));
+const SecurityPage = lazy(() => import('./pages/SecurityPage'));
+const HowItWorksPage = lazy(() => import('./pages/HowItWorksPage'));
 
 // Application State Context
 interface AppState {
@@ -116,17 +117,24 @@ export default function App() {
 
         {/* Main Content */}
         <main className="app-main" id="main-content" role="main">
-          <Routes>
-            <Route path="/" element={<DashboardPage />} />
-            <Route path="/upload" element={<UploadPage />} />
-            <Route path="/analysis" element={<AnalysisPage />} />
-            <Route path="/compare" element={<ComparePage />} />
-            <Route path="/ask" element={<AskPage />} />
-            <Route path="/actionpath" element={<ActionPathPage />} />
-            <Route path="/sources" element={<SourcesPage />} />
-            <Route path="/privacy-security" element={<SecurityPage />} />
-            <Route path="/how-it-works" element={<HowItWorksPage />} />
-          </Routes>
+          <Suspense fallback={
+            <div className="loading-spinner" style={{ minHeight: 320, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              <RefreshCw size={18} className="spin-animation" />
+              <span>Loading workspace module...</span>
+            </div>
+          }>
+            <Routes>
+              <Route path="/" element={<DashboardPage />} />
+              <Route path="/upload" element={<UploadPage />} />
+              <Route path="/analysis" element={<AnalysisPage />} />
+              <Route path="/compare" element={<ComparePage />} />
+              <Route path="/ask" element={<AskPage />} />
+              <Route path="/actionpath" element={<ActionPathPage />} />
+              <Route path="/sources" element={<SourcesPage />} />
+              <Route path="/privacy-security" element={<SecurityPage />} />
+              <Route path="/how-it-works" element={<HowItWorksPage />} />
+            </Routes>
+          </Suspense>
         </main>
       </div>
     </AppContext.Provider>
