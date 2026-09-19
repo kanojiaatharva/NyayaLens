@@ -66,4 +66,18 @@ class RateLimitFilterTest {
         String body = blockedRes.getContentAsString();
         org.junit.jupiter.api.Assertions.assertTrue(body.contains("RATE_LIMIT_EXCEEDED"));
     }
+
+    @Test
+    @DisplayName("Should reject malformed X-Forwarded-For header and fallback to remoteAddr")
+    void testMalformedXForwardedForFallback() throws ServletException, IOException {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/documents/doc_1/analyze");
+        request.addHeader("X-Forwarded-For", "malicious_injection_payload; DROP TABLE;");
+        request.setRemoteAddr("10.0.0.5");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        rateLimitFilter.doFilter(request, response, filterChain);
+
+        assertEquals(200, response.getStatus());
+        verify(filterChain, times(1)).doFilter(request, response);
+    }
 }

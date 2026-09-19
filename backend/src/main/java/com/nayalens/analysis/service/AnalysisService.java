@@ -32,6 +32,10 @@ public class AnalysisService {
     private final GeminiClient geminiClient;
     private final ObjectMapper objectMapper;
 
+    // Dedicated Java 21 virtual thread executor for async I/O GenAI calls
+    private final java.util.concurrent.ExecutorService virtualExecutor = 
+            java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor();
+
     // Cache analysis results to avoid redundant LLM calls
     private final Map<String, AnalysisResult> analysisCache = new ConcurrentHashMap<>();
 
@@ -58,21 +62,24 @@ public class AnalysisService {
         LegalDocument document = documentRepository.findById(documentId)
                 .orElseThrow(() -> new DocumentNotFoundException(documentId));
 
-        // 1. Run deterministic risk rule engine concurrently
+        // 1. Run deterministic risk rule engine concurrently on virtual thread
         CompletableFuture<List<Claim>> deterministicFuture = CompletableFuture.supplyAsync(
-                () -> riskEngine.scanRisks(document)
+                () -> riskEngine.scanRisks(document),
+                virtualExecutor
         );
 
-        // 2. Fetch AI structured understanding concurrently
+        // 2. Fetch AI structured understanding concurrently on virtual thread
         String prompt = PromptRegistry.buildUnderstandPrompt(document.sanitizedText());
         CompletableFuture<String> understandFuture = CompletableFuture.supplyAsync(
-                () -> geminiClient.generateStructuredJson(prompt, GeminiClient.ModelTier.FLASH)
+                () -> geminiClient.generateStructuredJson(prompt, GeminiClient.ModelTier.FLASH),
+                virtualExecutor
         );
 
-        // 3. Fetch secondary AI risks concurrently
+        // 3. Fetch secondary AI risks concurrently on virtual thread
         String riskPrompt = PromptRegistry.buildRiskPrompt(document.sanitizedText());
         CompletableFuture<String> riskFuture = CompletableFuture.supplyAsync(
-                () -> geminiClient.generateStructuredJson(riskPrompt, GeminiClient.ModelTier.FLASH)
+                () -> geminiClient.generateStructuredJson(riskPrompt, GeminiClient.ModelTier.FLASH),
+                virtualExecutor
         );
 
         // Await all parallel tasks concurrently
@@ -93,6 +100,10 @@ public class AnalysisService {
         AnalysisResult result = parseAndVerifyAnalysis(document, aiJson, riskJson, deterministicRisks, modelUsed);
         analysisCache.put(documentId, result);
         return result;
+    }
+
+    public AnalysisResult analyze(String documentId) {
+        return analyzeDocument(documentId);
     }
 
     public Optional<AnalysisResult> getCachedAnalysis(String documentId) {

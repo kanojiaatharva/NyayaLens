@@ -39,9 +39,21 @@ public class SecurityHeadersFilter extends OncePerRequestFilter {
         response.setHeader("X-Frame-Options", "DENY");
         response.setHeader("X-XSS-Protection", "1; mode=block");
         response.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
-        response.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+        response.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
+        response.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
+        response.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+        response.setHeader("Cross-Origin-Resource-Policy", "same-origin");
+        response.setHeader("X-Permitted-Cross-Domain-Policies", "none");
         response.setHeader("Content-Security-Policy",
-                "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'");
+                "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'");
+
+        // Prevent caching of confidential legal documents & API responses (OWASP A05:2021)
+        String uri = request.getRequestURI();
+        if (uri != null && uri.startsWith("/api/")) {
+            response.setHeader("Cache-Control", "no-store, no-cache, max-age=0, must-revalidate");
+            response.setHeader("Pragma", "no-cache");
+            response.setHeader("Expires", "0");
+        }
 
         long start = System.currentTimeMillis();
         try {

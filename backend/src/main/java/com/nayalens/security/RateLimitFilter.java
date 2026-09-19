@@ -98,11 +98,24 @@ public class RateLimitFilter extends OncePerRequestFilter {
         return "general";
     }
 
+    private static final java.util.regex.Pattern IPV4_PATTERN =
+            java.util.regex.Pattern.compile("^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$");
+    private static final java.util.regex.Pattern IPV6_PATTERN =
+            java.util.regex.Pattern.compile("^[0-9a-fA-F:]+$");
+
     private String getClientIp(HttpServletRequest request) {
         String xff = request.getHeader("X-Forwarded-For");
         if (xff != null && !xff.isBlank()) {
-            return xff.split(",")[0].trim();
+            String candidate = xff.split(",")[0].trim();
+            if (isValidIp(candidate)) {
+                return candidate;
+            }
         }
-        return request.getRemoteAddr() != null ? request.getRemoteAddr() : "127.0.0.1";
+        String remoteAddr = request.getRemoteAddr();
+        return (remoteAddr != null && !remoteAddr.isBlank() && isValidIp(remoteAddr)) ? remoteAddr : "127.0.0.1";
+    }
+
+    private boolean isValidIp(String ip) {
+        return IPV4_PATTERN.matcher(ip).matches() || IPV6_PATTERN.matcher(ip).matches();
     }
 }

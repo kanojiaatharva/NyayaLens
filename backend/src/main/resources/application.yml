@@ -2,11 +2,11 @@ server:
   port: ${PORT:${SERVER_PORT:8080}}
   compression:
     enabled: true
-    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript
     min-response-size: 1024
   tomcat:
     connection-timeout: 20000
-    max-connections: 10000
+    max-connections: 2000
     accept-count: 100
   error:
     include-message: never

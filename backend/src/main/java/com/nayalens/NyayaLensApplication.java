@@ -5,7 +5,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-@SpringBootApplication
+import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration;
+
+@SpringBootApplication(exclude = { UserDetailsServiceAutoConfiguration.class })
 @ConfigurationPropertiesScan
 @EnableScheduling
 public class NyayaLensApplication {
