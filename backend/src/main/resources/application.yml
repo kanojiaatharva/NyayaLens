@@ -1,5 +1,5 @@
 server:
-  port: ${SERVER_PORT:8080}
+  port: ${PORT:${SERVER_PORT:8080}}
   error:
     include-message: never
     include-binding-errors: never
@@ -41,8 +41,8 @@ nyayalens:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173}
   gemini:
     api-key: ${GEMINI_API_KEY:}
-    flash-model: ${GEMINI_FLASH_MODEL:gemini-3.8-flash}
-    pro-model: ${GEMINI_PRO_MODEL:gemini-3.1-pro-preview}
+    flash-model: ${GEMINI_FLASH_MODEL:${GEMINI_MODEL_FAST:gemini-3.8-flash}}
+    pro-model: ${GEMINI_PRO_MODEL:${GEMINI_MODEL_REASONING:gemini-3.1-pro-preview}}
     timeout-seconds: ${GEMINI_TIMEOUT_SECONDS:30}
     max-retries: ${GEMINI_MAX_RETRIES:2}
   rate-limits:

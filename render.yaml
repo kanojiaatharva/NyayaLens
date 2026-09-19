@@ -12,6 +12,10 @@ services:
         value: default
       - key: GEMINI_API_KEY
         sync: false
+      - key: GEMINI_FLASH_MODEL
+        value: gemini-3.8-flash
+      - key: GEMINI_PRO_MODEL
+        value: gemini-3.1-pro-preview
       - key: GEMINI_MODEL_FAST
         value: gemini-3.8-flash
       - key: GEMINI_MODEL_REASONING
